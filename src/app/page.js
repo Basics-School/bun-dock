@@ -24,7 +24,7 @@ import Image from "next/image";
 //   return users;
 // };
 async function getUsers() {
-  const users = await fetch("http://0.0.0.0:3000/api/users");
+  const users = await fetch("/api/users");
   console.log(users);
   return users.json();
 }
