@@ -24,9 +24,9 @@ import Image from "next/image";
 //   return users;
 // };
 async function getUsers() {
-  const users = await fetch("http://localhost:3000/api/users");
-  console.log(users);
-  return users.json();
+  // const users = await fetch("http://localhost:3000/api/users");
+  // console.log(users);
+  // return users.json();
 }
 export default async function Home() {
   // const createUser = (e) => {
