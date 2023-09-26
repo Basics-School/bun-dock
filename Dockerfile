@@ -1,32 +1,47 @@
-
-# FROM node:18-alpine AS runner
-
-# RUN apk add --no-cache libc6-compat
-# RUN npm install -g npm@latest
+# FROM oven/bun AS runner
 # WORKDIR /app
 # ENV NODE_ENV production
-
-# COPY . .
-# RUN yarn
-
-# RUN yarn build
-
+# ADD . .
+# RUN bun install
+# RUN bun run build
 # EXPOSE 3000
-# EXPOSE 5555
+
 # ENV PORT 3000
+# ENV HOSTNAME "0.0.0.0"
+# CMD ["bun","start"]
 
-# CMD ["yarn", "start"  ]
+# syntax=docker/dockerfile:1
 
+ARG BUN_VERSION=1.0.0
 
+FROM oven/bun:${BUN_VERSION} as base
 
-FROM oven/bun AS runner
 WORKDIR /app
-ENV NODE_ENV production
-ADD . .
+
+ENV NODE_ENV=production
+
+FROM base as deps
+
+COPY package.json bun.lockb ./
 RUN bun install
-RUN bun run build
+
+FROM node:18 as build
+
+WORKDIR /app
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN npm run build -- --no-lint
+
+FROM base as final
+
+USER bun
+
+COPY --from=build /app/package.json ./package.json
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/.next ./.next
+COPY --from=build /app/public ./public
+
 EXPOSE 3000
 
-ENV PORT 3000
-
-CMD ["bun","start"]
+CMD ["bun", "run", "start"]
