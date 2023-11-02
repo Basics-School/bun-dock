@@ -36,4 +36,5 @@ next-env.d.ts
 # Database
 
 prisma/dev.db
+prisma/client
 .env

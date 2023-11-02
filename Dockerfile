@@ -1,47 +1,41 @@
-# FROM oven/bun AS runner
-# WORKDIR /app
-# ENV NODE_ENV production
-# ADD . .
-# RUN bun install
-# RUN bun run build
-# EXPOSE 3000
+# use the official Bun image
+# see all versions at https://hub.docker.com/r/oven/bun/tags
+FROM oven/bun:1 as base
+WORKDIR /usr/src/app
+ENV DATABASE_URL="file:./dev.db"
+# install dependencies into temp directory
+# this will cache them and speed up future builds
+# FROM base AS install
+# RUN mkdir -p /temp/dev
+# COPY package.json bun.lockb /temp/dev/
+# RUN cd /temp/dev && bun install --frozen-lockfile
 
-# ENV PORT 3000
-# ENV HOSTNAME "0.0.0.0"
-# CMD ["bun","start"]
-
-# syntax=docker/dockerfile:1
-
-ARG BUN_VERSION=1.0.0
-
-FROM oven/bun:${BUN_VERSION} as base
-
-WORKDIR /app
-
-ENV NODE_ENV=production
-
-FROM base as deps
-
-COPY package.json bun.lockb ./
-RUN bun install
-
-FROM node:18 as build
-
-WORKDIR /app
-
-COPY --from=deps /app/node_modules ./node_modules
+# install with --production (exclude devDependencies)
+# RUN mkdir -p /temp/prod
+COPY package.json bun.lockb /
 COPY . .
-RUN npm run build -- --no-lint
+RUN  bun install 
 
-FROM base as final
+# copy node_modules from temp directory
+# then copy all (non-ignored) project files into the image
+# FROM install AS prerelease
+# COPY --from=install /temp/dev/node_modules node_modules
+# 
 
-USER bun
+# # [optional] tests & build
+# ENV NODE_ENV=production
+# RUN bun test
+# RUN bun run build
 
-COPY --from=build /app/package.json ./package.json
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/.next ./.next
-COPY --from=build /app/public ./public
+# # copy production dependencies and source code into final image
+# FROM base AS release
+# COPY --from=install /temp/prod/node_modules node_modules
+# COPY --from=prerelease /usr/src/app/index.ts .
+# COPY --from=prerelease /usr/src/app/package.json .
 
-EXPOSE 3000
+# run the app
 
-CMD ["bun", "run", "start"]
+EXPOSE 3000/tcp
+ENV NODE_ENV=production
+RUN  bun run build
+ENTRYPOINT [ "bun", "run", "start" ]
